@@ -1,0 +1,387 @@
+import React, { useState, useRef, useEffect } from 'react';
+import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Shuffle, Repeat, Heart, MoreVertical, List } from 'lucide-react';
+
+export default function MobileMusicPlayer() {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [volume, setVolume] = useState(70);
+  const [isMuted, setIsMuted] = useState(false);
+  const [currentSong, setCurrentSong] = useState(0);
+  const [isShuffled, setIsShuffled] = useState(false);
+  const [isRepeating, setIsRepeating] = useState(false);
+  const [isLiked, setIsLiked] = useState(false);
+  const [showPlaylist, setShowPlaylist] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  
+  const audioRef = useRef(null);
+  const progressRef = useRef(null);
+
+  // Enhanced playlist with more variety
+  const playlist = [
+    {
+      title: "Midnight Vibes",
+      artist: "Echo Dreams",
+      album: "Neon Nights",
+      duration: 245,
+      cover: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgdmlld0JveD0iMCAwIDMwMCAzMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSJhIiB4MT0iMCIgeTE9IjAiIHgyPSIxIiB5Mj0iMSI+PHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzUzM2VmNCIvPjxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzlkNGVkZCIvPjwvbGluZWFyR3JhZGllbnQ+PC9kZWZzPjxyZWN0IHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIiBmaWxsPSJ1cmwoI2EpIi8+PGNpcmNsZSBjeD0iMTUwIiBjeT0iMTUwIiByPSI2MCIgZmlsbD0id2hpdGUiIG9wYWNpdHk9IjAuMiIvPjxjaXJjbGUgY3g9IjE1MCIgY3k9IjE1MCIgcj0iMjAiIGZpbGw9IndoaXRlIi8+PC9zdmc+"
+    },
+    {
+      title: "Electric Summer", 
+      artist: "Solar Waves",
+      album: "Bright Days",
+      duration: 198,
+      cover: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgdmlld0JveD0iMCAwIDMwMCAzMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSJiIiB4MT0iMCIgeTE9IjAiIHgyPSIxIiB5Mj0iMSI+PHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iI2Y5NzMxNiIvPjxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iI2VmNDQ0NCIvPjwvbGluZWFyR3JhZGllbnQ+PC9kZWZzPjxyZWN0IHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIiBmaWxsPSJ1cmwoI2IpIi8+PGNpcmNsZSBjeD0iMTUwIiBjeT0iMTUwIiByPSI2MCIgZmlsbD0id2hpdGUiIG9wYWNpdHk9IjAuMyIvPjx0cmlhbmdsZSBjeD0iMTUwIiBjeT0iMTUwIiByPSIyNSIgZmlsbD0id2hpdGUiLz48cG9seWdvbiBwb2ludHM9IjEzNSwxMzUgMTY1LDE1MCA1MzUsMTY1IiBmaWxsPSJ3aGl0ZSIvPjwvc3ZnPg=="
+    },
+    {
+      title: "Ocean Waves",
+      artist: "Coastal Breeze", 
+      album: "Serenity",
+      duration: 312,
+      cover: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgdmlld0JveD0iMCAwIDMwMCAzMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSJjIiB4MT0iMCIgeTE9IjAiIHgyPSIxIiB5Mj0iMSI+PHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzA2Yjc5NCIvPjxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzA2Yjc5NCIvPjwvbGluZWFyR3JhZGllbnQ+PC9kZWZzPjxyZWN0IHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIiBmaWxsPSJ1cmwoI2MpIi8+PGVsbGlwc2UgY3g9IjE1MCIgY3k9IjE4MCIgcng9IjgwIiByeT0iNDAiIGZpbGw9IndoaXRlIiBvcGFjaXR5PSIwLjMiLz48ZWxsaXBzZSBjeD0iMTUwIiBjeT0iMTIwIiByeD0iNjAiIHJ5PSIzMCIgZmlsbD0id2hpdGUiIG9wYWNpdHk9IjAuNSIvPjwvc3ZnPg=="
+    },
+    {
+      title: "City Lights",
+      artist: "Urban Pulse",
+      album: "Metro Dreams", 
+      duration: 267,
+      cover: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgdmlld0JveD0iMCAwIDMwMCAzMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSJkIiB4MT0iMCIgeTE9IjAiIHgyPSIxIiB5Mj0iMSI+PHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzM3MzNmNSIvPjxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzFjMWM5MyIvPjwvbGluZWFyR3JhZGllbnQ+PC9kZWZzPjxyZWN0IHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIiBmaWxsPSJ1cmwoI2QpIi8+PHJlY3QgeD0iNjAiIHk9IjEwMCIgd2lkdGg9IjIwIiBoZWlnaHQ9IjEwMCIgZmlsbD0id2hpdGUiIG9wYWNpdHk9IjAuNyIvPjxyZWN0IHg9IjEwMCIgeT0iODAiIHdpZHRoPSIyMCIgaGVpZ2h0PSIxMjAiIGZpbGw9IndoaXRlIiBvcGFjaXR5PSIwLjUiLz48cmVjdCB4PSIxNDAiIHk9IjYwIiB3aWR0aD0iMjAiIGhlaWdodD0iMTQwIiBmaWxsPSJ3aGl0ZSIgb3BhY2l0eT0iMC44Ii8+PHJlY3QgeD0iMTgwIiB5PSI5MCIgd2lkdGg9IjIwIiBoZWlnaHQ9IjExMCIgZmlsbD0id2hpdGUiIG9wYWNpdHk9IjAuNiIvPjxyZWN0IHg9IjIyMCIgeT0iNzAiIHdpZHRoPSIyMCIgaGVpZ2h0PSIxMzAiIGZpbGw9IndoaXRlIiBvcGFjaXR5PSIwLjciLz48L3N2Zz4="
+    },
+    {
+      title: "Starlight Dance",
+      artist: "Cosmic Rhythm",
+      album: "Galaxy Beats",
+      duration: 223,
+      cover: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgdmlld0JveD0iMCAwIDMwMCAzMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSJlIiB4MT0iMCIgeTE9IjAiIHgyPSIxIiB5Mj0iMSI+PHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzFmMmEzNyIvPjxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzM3MzM0ZSIvPjwvbGluZWFyR3JhZGllbnQ+PC9kZWZzPjxyZWN0IHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIiBmaWxsPSJ1cmwoI2UpIi8+PGNpcmNsZSBjeD0iMTAwIiBjeT0iMTAwIiByPSIzIiBmaWxsPSJ3aGl0ZSIvPjxjaXJjbGUgY3g9IjIwMCIgY3k9IjE2MCIgcj0iMiIgZmlsbD0id2hpdGUiLz48Y2lyY2xlIGN4PSIxNDAiIGN5PSI4MCIgcj0iMSIgZmlsbD0id2hpdGUiLz48Y2lyY2xlIGN4PSI4MCIgY3k9IjIwMCIgcj0iMiIgZmlsbD0id2hpdGUiLz48Y2lyY2xlIGN4PSIyNDAiIGN5PSIyMjAiIHI9IjMiIGZpbGw9IndoaXRlIi8+PGNpcmNsZSBjeD0iMTgwIiBjeT0iMjQwIiByPSIxIiBmaWxsPSJ3aGl0ZSIvPjwvc3ZnPg=="
+    }
+  ];
+
+  const formatTime = (time) => {
+    const minutes = Math.floor(time / 60);
+    const seconds = Math.floor(time % 60);
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  };
+
+  const togglePlayPause = () => {
+    setIsPlaying(!isPlaying);
+  };
+
+  const nextSong = () => {
+    if (isShuffled) {
+      const randomIndex = Math.floor(Math.random() * playlist.length);
+      setCurrentSong(randomIndex);
+    } else {
+      setCurrentSong((prev) => (prev + 1) % playlist.length);
+    }
+    setCurrentTime(0);
+  };
+
+  const previousSong = () => {
+    setCurrentSong((prev) => (prev - 1 + playlist.length) % playlist.length);
+    setCurrentTime(0);
+  };
+
+  const handleProgressTouch = (e) => {
+    const rect = progressRef.current.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clickX = clientX - rect.left;
+    const percentage = Math.max(0, Math.min(1, clickX / rect.width));
+    const newTime = percentage * playlist[currentSong].duration;
+    setCurrentTime(newTime);
+  };
+
+  const handleTouchStart = () => {
+    setIsDragging(true);
+  };
+
+  const handleTouchEnd = () => {
+    setIsDragging(false);
+  };
+
+  const toggleMute = () => {
+    setIsMuted(!isMuted);
+  };
+
+  const toggleShuffle = () => {
+    setIsShuffled(!isShuffled);
+  };
+
+  const toggleRepeat = () => {
+    setIsRepeating(!isRepeating);
+  };
+
+  const toggleLike = () => {
+    setIsLiked(!isLiked);
+  };
+
+  // Simulate audio playback
+  useEffect(() => {
+    let interval;
+    if (isPlaying && !isDragging) {
+      interval = setInterval(() => {
+        setCurrentTime((prev) => {
+          if (prev >= playlist[currentSong].duration) {
+            if (isRepeating) {
+              return 0;
+            } else {
+              nextSong();
+              return 0;
+            }
+          }
+          return prev + 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [isPlaying, currentSong, isRepeating, isDragging]);
+
+  const currentTrack = playlist[currentSong];
+  const progressPercentage = (currentTime / currentTrack.duration) * 100;
+
+  if (showPlaylist) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-gray-900 via-purple-900 to-violet-900 text-white">
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 pb-4">
+          <button 
+            onClick={() => setShowPlaylist(false)}
+            className="text-white text-lg font-semibold"
+          >
+            ← Now Playing
+          </button>
+          <h1 className="text-lg font-semibold">Playlist</h1>
+          <div className="w-6"></div>
+        </div>
+
+        {/* Playlist */}
+        <div className="px-6 space-y-1">
+          {playlist.map((song, index) => (
+            <div
+              key={index}
+              onClick={() => {
+                setCurrentSong(index);
+                setCurrentTime(0);
+                setShowPlaylist(false);
+              }}
+              className={`flex items-center space-x-4 p-4 rounded-xl transition-all active:scale-95 ${
+                index === currentSong
+                  ? 'bg-white/20 shadow-lg'
+                  : 'bg-white/5 active:bg-white/10'
+              }`}
+            >
+              <img
+                src={song.cover}
+                alt={song.album}
+                className="w-14 h-14 rounded-lg shadow-md"
+              />
+              <div className="flex-1 min-w-0">
+                <p className={`font-semibold truncate ${
+                  index === currentSong ? 'text-white' : 'text-gray-200'
+                }`}>
+                  {song.title}
+                </p>
+                <p className="text-gray-400 text-sm truncate">{song.artist}</p>
+              </div>
+              <div className="text-right">
+                <span className="text-gray-400 text-sm">{formatTime(song.duration)}</span>
+                {index === currentSong && isPlaying && (
+                  <div className="w-4 h-4 mt-1 ml-auto">
+                    <div className="flex space-x-1">
+                      <div className="w-1 bg-white rounded animate-pulse" style={{animationDelay: '0ms'}}></div>
+                      <div className="w-1 bg-white rounded animate-pulse" style={{animationDelay: '150ms'}}></div>
+                      <div className="w-1 bg-white rounded animate-pulse" style={{animationDelay: '300ms'}}></div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-gray-900 via-purple-900 to-violet-900 text-white relative overflow-hidden">
+      {/* Background blur effect */}
+      <div className="absolute inset-0 opacity-30">
+        <img
+          src={currentTrack.cover}
+          alt=""
+          className="w-full h-full object-cover blur-3xl scale-110"
+        />
+      </div>
+      
+      <div className="relative z-10 flex flex-col h-screen">
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 pt-12">
+          <button className="p-2 hover:bg-white/10 rounded-full transition-colors">
+            <MoreVertical size={24} />
+          </button>
+          <div className="text-center">
+            <p className="text-sm opacity-70">Playing from</p>
+            <p className="font-semibold">{currentTrack.album}</p>
+          </div>
+          <button 
+            onClick={() => setShowPlaylist(true)}
+            className="p-2 hover:bg-white/10 rounded-full transition-colors"
+          >
+            <List size={24} />
+          </button>
+        </div>
+
+        {/* Album Art */}
+        <div className="flex-1 flex items-center justify-center px-8 py-8">
+          <div className="relative w-full max-w-sm aspect-square">
+            <img
+              src={currentTrack.cover}
+              alt={currentTrack.album}
+              className="w-full h-full rounded-3xl shadow-2xl"
+            />
+            <div className="absolute inset-0 rounded-3xl bg-gradient-to-t from-black/20 to-transparent"></div>
+          </div>
+        </div>
+
+        {/* Song Info & Controls */}
+        <div className="px-8 pb-8">
+          {/* Song Info */}
+          <div className="text-center mb-8">
+            <h1 className="text-2xl font-bold mb-2 leading-tight">{currentTrack.title}</h1>
+            <p className="text-lg opacity-70">{currentTrack.artist}</p>
+          </div>
+
+          {/* Progress Bar */}
+          <div className="mb-6">
+            <div 
+              ref={progressRef}
+              className="relative bg-white/20 h-1 rounded-full cursor-pointer mb-3"
+              onTouchStart={handleTouchStart}
+              onTouchEnd={handleTouchEnd}
+              onTouchMove={handleProgressTouch}
+              onClick={handleProgressTouch}
+            >
+              <div 
+                className="bg-white h-full rounded-full transition-all duration-300 ease-out"
+                style={{ width: `${progressPercentage}%` }}
+              ></div>
+              <div 
+                className="absolute top-1/2 w-4 h-4 bg-white rounded-full shadow-lg transform -translate-y-1/2 transition-all"
+                style={{ left: `${progressPercentage}%`, marginLeft: '-8px' }}
+              ></div>
+            </div>
+            <div className="flex justify-between text-sm opacity-70">
+              <span>{formatTime(currentTime)}</span>
+              <span>{formatTime(currentTrack.duration)}</span>
+            </div>
+          </div>
+
+          {/* Main Controls */}
+          <div className="flex items-center justify-between mb-6">
+            <button
+              onClick={toggleShuffle}
+              className={`p-3 rounded-full transition-all active:scale-95 ${
+                isShuffled ? 'bg-white text-gray-900' : 'hover:bg-white/10'
+              }`}
+            >
+              <Shuffle size={20} />
+            </button>
+            
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={previousSong}
+                className="p-3 hover:bg-white/10 rounded-full transition-all active:scale-95"
+              >
+                <SkipBack size={28} />
+              </button>
+              
+              <button
+                onClick={togglePlayPause}
+                className="p-5 bg-white text-gray-900 rounded-full shadow-xl hover:scale-105 active:scale-95 transition-all"
+              >
+                {isPlaying ? <Pause size={32} /> : <Play size={32} className="ml-1" />}
+              </button>
+              
+              <button
+                onClick={nextSong}
+                className="p-3 hover:bg-white/10 rounded-full transition-all active:scale-95"
+              >
+                <SkipForward size={28} />
+              </button>
+            </div>
+
+            <button
+              onClick={toggleRepeat}
+              className={`p-3 rounded-full transition-all active:scale-95 ${
+                isRepeating ? 'bg-white text-gray-900' : 'hover:bg-white/10'
+              }`}
+            >
+              <Repeat size={20} />
+            </button>
+          </div>
+
+          {/* Secondary Controls */}
+          <div className="flex items-center justify-between">
+            <button
+              onClick={toggleLike}
+              className={`p-3 rounded-full transition-all active:scale-95 ${
+                isLiked ? 'text-red-400' : 'hover:bg-white/10'
+              }`}
+            >
+              <Heart size={24} fill={isLiked ? 'currentColor' : 'none'} />
+            </button>
+
+            <div className="flex items-center space-x-3 flex-1 max-w-xs mx-4">
+              <button
+                onClick={toggleMute}
+                className="hover:bg-white/10 p-2 rounded-full transition-colors"
+              >
+                {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
+              </button>
+              <div className="flex-1">
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={isMuted ? 0 : volume}
+                  onChange={(e) => setVolume(parseInt(e.target.value))}
+                  className="w-full h-1 bg-white/20 rounded-lg appearance-none cursor-pointer slider"
+                />
+              </div>
+            </div>
+
+            <button className="p-3 hover:bg-white/10 rounded-full transition-all active:scale-95">
+              <MoreVertical size={24} />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <style jsx>{`
+        .slider::-webkit-slider-thumb {
+          appearance: none;
+          width: 16px;
+          height: 16px;
+          border-radius: 50%;
+          background: white;
+          cursor: pointer;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .slider::-moz-range-thumb {
+          width: 16px;
+          height: 16px;
+          border-radius: 50%;
+          background: white;
+          cursor: pointer;
+          border: none;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        @keyframes pulse {
+          0%, 100% { height: 0.25rem; }
+          50% { height: 1rem; }
+        }
+      `}</style>
+    </div>
+  );
+}
